@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Dataflow",
+    "displayName": "DFG2_Bronze_TLC_Ingestion"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "38d4417b-4fcc-bfee-43b5-1a9ead5b95d8"
+  }
+}
