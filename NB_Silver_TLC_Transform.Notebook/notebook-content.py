@@ -8,8 +8,8 @@
 # META   },
 # META   "dependencies": {
 # META     "lakehouse": {
-# META       "default_lakehouse": "6cdf0087-245c-4b63-875d-13269552fa96",
-# META       "default_lakehouse_name": "LH_Silver",
+# META       "default_lakehouse": "6d4e1b8b-5efe-4c31-906b-dc704c4f9c83",
+# META       "default_lakehouse_name": "LH_Gold",
 # META       "default_lakehouse_workspace_id": "b48f3b95-6043-42fb-b6ab-2206ae98dab8",
 # META       "known_lakehouses": [
 # META         {
@@ -17,6 +17,9 @@
 # META         },
 # META         {
 # META           "id": "6cdf0087-245c-4b63-875d-13269552fa96"
+# META         },
+# META         {
+# META           "id": "6d4e1b8b-5efe-4c31-906b-dc704c4f9c83"
 # META         }
 # META       ]
 # META     }
@@ -1000,6 +1003,717 @@ print("✓ FULL RECONCILIATION PASSED")
 
 silver_count = spark.read.table("LH_Silver.dbo.silver_trips").count()
 print(silver_count)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# MARKDOWN ********************
+
+# # Gold Layer
+
+# CELL ********************
+
+from pyspark.sql import functions as F
+
+silver_trips = spark.read.table(
+    "LH_Silver.dbo.silver_trips"
+)
+
+silver_zone = spark.read.table(
+    "LH_Silver.dbo.silver_taxi_zone"
+)
+
+print("Silver trips:", silver_trips.count())
+print("Silver trips columns:", len(silver_trips.columns))
+
+print("Silver zones:", silver_zone.count())
+print("Silver zones columns:", len(silver_zone.columns))
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+silver_trips.select(
+    F.min("pickup_date").alias("min_date"),
+    F.max("pickup_date").alias("max_date")
+).show()
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+date_range = silver_trips.select(
+    F.min("pickup_date").alias("min_date"),
+    F.max("pickup_date").alias("max_date")
+).first()
+
+min_date = date_range["min_date"]
+max_date = date_range["max_date"]
+
+dim_date = (
+    spark.range(1)
+    .select(
+        F.explode(
+            F.sequence(
+                F.lit(min_date),
+                F.lit(max_date),
+                F.expr("INTERVAL 1 DAY")
+            )
+        ).alias("full_date")
+    )
+    .withColumn(
+        "date_key",
+        F.date_format("full_date", "yyyyMMdd").cast("int")
+    )
+    .withColumn("day", F.dayofmonth("full_date"))
+    .withColumn("month", F.month("full_date"))
+    .withColumn("month_name", F.date_format("full_date", "MMMM"))
+    .withColumn("quarter", F.quarter("full_date"))
+    .withColumn("year", F.year("full_date"))
+    .withColumn(
+        "day_of_week",
+        F.date_format("full_date", "EEEE")
+    )
+    .withColumn(
+        "day_of_week_number",
+        F.dayofweek("full_date")
+    )
+    .withColumn(
+        "is_weekend",
+        F.dayofweek("full_date").isin([1, 7])
+    )
+    .select(
+        "date_key",
+        "full_date",
+        "day",
+        "month",
+        "month_name",
+        "quarter",
+        "year",
+        "day_of_week",
+        "day_of_week_number",
+        "is_weekend"
+    )
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print("Rows:", dim_date.count())
+print("Columns:", len(dim_date.columns))
+
+display(
+    dim_date.orderBy("full_date")
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+# dim_date.write \
+#     .format("delta") \
+#     .mode("overwrite") \
+#     .saveAsTable("dim_date")
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+pickup_location_source = spark.read.table(
+    "LH_Silver.dbo.silver_taxi_zone"
+)
+
+print("Rows:", pickup_location_source.count())
+print("Columns:", len(pickup_location_source.columns))
+
+pickup_location_source.show(5, truncate=False)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+dim_pickup_location = (
+    pickup_location_source
+    .select(
+        F.col("location_id").alias("pickup_location_key"),
+        F.col("borough"),
+        F.col("zone"),
+        F.col("service_zone")
+    )
+    .dropDuplicates(["pickup_location_key"])
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print("Rows:", dim_pickup_location.count())
+print("Columns:", len(dim_pickup_location.columns))
+
+dim_pickup_location.orderBy("pickup_location_key").show(10, truncate=False)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print(
+    "Null keys:",
+    dim_pickup_location
+        .filter(F.col("pickup_location_key").isNull())
+        .count()
+)
+
+print(
+    "Duplicate keys:",
+    dim_pickup_location.count()
+    - dim_pickup_location.select("pickup_location_key").distinct().count()
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+dim_dropoff_location = (
+    pickup_location_source
+    .select(
+        F.col("location_id").alias("dropoff_location_key"),
+        F.col("borough"),
+        F.col("zone"),
+        F.col("service_zone")
+    )
+    .dropDuplicates(["dropoff_location_key"])
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print("Rows:", dim_dropoff_location.count())
+print("Columns:", len(dim_dropoff_location.columns))
+
+dim_dropoff_location.orderBy("dropoff_location_key").show(
+    10,
+    truncate=False
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print(
+    "Null keys:",
+    dim_dropoff_location
+        .filter(F.col("dropoff_location_key").isNull())
+        .count()
+)
+
+print(
+    "Duplicate keys:",
+    dim_dropoff_location.count()
+    - dim_dropoff_location.select("dropoff_location_key").distinct().count()
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+# dim_pickup_location.write \
+#     .format("delta") \
+#     .mode("overwrite") \
+#     .saveAsTable("dim_pickup_location")
+
+# dim_dropoff_location.write \
+#     .format("delta") \
+#     .mode("overwrite") \
+#     .saveAsTable("dim_dropoff_location")
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+silver_trips.select(
+    "payment_type"
+).groupBy(
+    "payment_type"
+).count().orderBy(
+    "payment_type"
+).show()
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+payment_type_mapping = [
+    (0, "Flex Fare"),
+    (1, "Credit Card"),
+    (2, "Cash"),
+    (3, "No Charge"),
+    (4, "Dispute")
+]
+
+dim_payment_type = spark.createDataFrame(
+    payment_type_mapping,
+    ["payment_type_key", "payment_type_name"]
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print("Rows:", dim_payment_type.count())
+print("Columns:", len(dim_payment_type.columns))
+
+dim_payment_type.orderBy("payment_type_key").show(
+    truncate=False
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+# dim_payment_type.write \
+#     .format("delta") \
+#     .mode("overwrite") \
+#     .saveAsTable("dim_payment_type")
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+silver_trips.select(
+    "vendor_id"
+).groupBy(
+    "vendor_id"
+).count().orderBy(
+    "vendor_id"
+).show()
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+vendor_mapping = [
+    (1, "Creative Mobile Technologies"),
+    (2, "Curb Mobility"),
+    (6, "Myle Technologies")
+]
+
+dim_vendor = spark.createDataFrame(
+    vendor_mapping,
+    ["vendor_key", "vendor_name"]
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+silver_vendor_ids = (
+    silver_trips
+    .select("vendor_id")
+    .distinct()
+)
+
+missing_vendors = (
+    silver_vendor_ids
+    .join(
+        dim_vendor,
+        silver_vendor_ids.vendor_id == dim_vendor.vendor_key,
+        "left_anti"
+    )
+)
+
+print(
+    "Vendor IDs in Silver:",
+    silver_vendor_ids.count()
+)
+
+print(
+    "Missing from dimension:",
+    missing_vendors.count()
+)
+
+missing_vendors.show()
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+dim_vendor.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .saveAsTable("dim_vendor")
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+fact_source = (
+    silver_trips
+    .withColumn(
+        "trip_key",
+        F.sha2(
+            F.concat_ws(
+                "||",
+                F.col("vendor_id").cast("string"),
+                F.col("pickup_datetime").cast("string"),
+                F.col("dropoff_datetime").cast("string"),
+                F.col("pickup_location_id").cast("string"),
+                F.col("dropoff_location_id").cast("string"),
+                F.col("payment_type").cast("string"),
+                F.col("trip_distance").cast("string"),
+                F.col("total_amount").cast("string")
+            ),
+            256
+        )
+    )
+    .withColumn(
+        "date_key",
+        F.date_format("pickup_date", "yyyyMMdd").cast("int")
+    )
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print(
+    "Fact source rows:",
+    fact_source.count()
+)
+
+print(
+    "Null trip keys:",
+    fact_source
+        .filter(F.col("trip_key").isNull())
+        .count()
+)
+
+print(
+    "Duplicate trip keys:",
+    fact_source.count()
+    - fact_source.select("trip_key").distinct().count()
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+fact_with_date = (
+    fact_source
+    .withColumn(
+        "date_key",
+        F.date_format("pickup_date", "yyyyMMdd").cast("int")
+    )
+)
+
+print("Rows:", fact_with_date.count())
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+dim_date_gold = spark.read.table("dim_date").alias("d")
+dim_pickup_gold = spark.read.table("dim_pickup_location").alias("pu")
+dim_dropoff_gold = spark.read.table("dim_dropoff_location").alias("do")
+dim_payment_gold = spark.read.table("dim_payment_type").alias("pt")
+dim_vendor_gold = spark.read.table("dim_vendor").alias("v")
+
+
+f = fact_source.alias("f")
+
+fact_with_keys = (
+    f
+    .join(
+        dim_date_gold,
+        F.col("f.date_key") ==
+        F.col("d.date_key"),
+        "left"
+    )
+    .join(
+        dim_pickup_gold,
+        F.col("f.pickup_location_id") ==
+        F.col("pu.pickup_location_key"),
+        "left"
+    )
+    .join(
+        dim_dropoff_gold,
+        F.col("f.dropoff_location_id") ==
+        F.col("do.dropoff_location_key"),
+        "left"
+    )
+    .join(
+        dim_payment_gold,
+        F.col("f.payment_type") ==
+        F.col("pt.payment_type_key"),
+        "left"
+    )
+    .join(
+        dim_vendor_gold,
+        F.col("f.vendor_id") ==
+        F.col("v.vendor_key"),
+        "left"
+    )
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print("Rows before joins:", fact_source.count())
+print("Rows after joins:", fact_with_keys.count())
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print("Missing date matches:",
+      fact_with_keys.filter(F.col("d.date_key").isNull()).count())
+
+print("Missing pickup matches:",
+      fact_with_keys.filter(F.col("pu.pickup_location_key").isNull()).count())
+
+print("Missing dropoff matches:",
+      fact_with_keys.filter(F.col("do.dropoff_location_key").isNull()).count())
+
+print("Missing payment matches:",
+      fact_with_keys.filter(F.col("pt.payment_type_key").isNull()).count())
+
+print("Missing vendor matches:",
+      fact_with_keys.filter(F.col("v.vendor_key").isNull()).count())
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+fact_taxi_trip = fact_with_keys.select(
+    F.col("f.trip_key").alias("trip_key"),
+
+    F.col("f.date_key").alias("date_key"),
+
+    F.col("f.pickup_location_id").alias("pickup_location_key"),
+
+    F.col("f.dropoff_location_id").alias("dropoff_location_key"),
+
+    F.col("f.payment_type").alias("payment_type_key"),
+
+    F.col("f.vendor_id").alias("vendor_key"),
+
+    F.col("f.pickup_datetime").alias("pickup_datetime"),
+
+    F.col("f.dropoff_datetime").alias("dropoff_datetime"),
+
+    F.col("f.passenger_count").alias("passenger_count"),
+
+    F.col("f.trip_distance").alias("trip_distance"),
+
+    F.col("f.trip_duration_minutes").alias("trip_duration_minutes"),
+
+    F.col("f.average_speed_mph").alias("average_speed_mph"),
+
+    F.col("f.fare_amount").alias("fare_amount"),
+
+    F.col("f.extra").alias("extra"),
+
+    F.col("f.mta_tax").alias("mta_tax"),
+
+    F.col("f.tip_amount").alias("tip_amount"),
+
+    F.col("f.tolls_amount").alias("tolls_amount"),
+
+    F.col("f.improvement_surcharge").alias("improvement_surcharge"),
+
+    F.col("f.total_amount").alias("total_amount"),
+
+    F.col("f.congestion_surcharge").alias("congestion_surcharge"),
+
+    F.col("f.airport_fee").alias("airport_fee"),
+
+    F.col("f.cbd_congestion_fee").alias("cbd_congestion_fee")
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print("Rows:", fact_taxi_trip.count())
+print("Columns:", len(fact_taxi_trip.columns))
+
+fact_taxi_trip.printSchema()
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+# fact_taxi_trip.write \
+#     .format("delta") \
+#     .mode("overwrite") \
+#     .saveAsTable("fact_taxi_trip")
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+print("dim_date:", spark.read.table("dim_date").count())
+print("dim_pickup_location:", spark.read.table("dim_pickup_location").count())
+print("dim_dropoff_location:", spark.read.table("dim_dropoff_location").count())
+print("dim_payment_type:", spark.read.table("dim_payment_type").count())
+print("dim_vendor:", spark.read.table("dim_vendor").count())
+print("fact_taxi_trip:", spark.read.table("fact_taxi_trip").count())
 
 # METADATA ********************
 
