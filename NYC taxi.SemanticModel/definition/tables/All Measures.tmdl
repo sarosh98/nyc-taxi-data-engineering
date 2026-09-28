@@ -1,0 +1,78 @@
+table 'All Measures'
+	lineageTag: fec71cd0-83b6-4610-9708-31ce3975381d
+
+	measure 'Total Trips' =
+			
+			COUNTROWS(fact_taxi_trip)
+		formatString: 0
+		lineageTag: a67af366-1894-41db-b2af-2cc3f3fd880d
+
+	measure 'Total Revenue' =
+			
+			SUM(fact_taxi_trip[total_amount])
+		lineageTag: c44c82d4-2faf-401a-b6d4-e50fc825e58f
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Average Fare' =
+			
+			AVERAGE(fact_taxi_trip[fare_amount])
+		lineageTag: 7599d6b6-c517-48e8-bdf5-a567df0844b3
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Average Trip Distance' =
+			
+			AVERAGE(fact_taxi_trip[trip_distance])
+		lineageTag: 99fdcbef-8821-40a3-a93a-c931b8359aac
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Average Trip Duration' =
+			
+			AVERAGE(fact_taxi_trip[trip_duration_minutes])
+		lineageTag: a4cbc77d-846c-4f41-ae54-aa87e152685f
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Average Passengers' =
+			
+			AVERAGE(fact_taxi_trip[passenger_count])
+		lineageTag: 75d46295-6dcf-4b45-8f15-c4f9f95f7b3a
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Total Tips' =
+			
+			SUM(fact_taxi_trip[tip_amount])
+		lineageTag: 1693d918-41f9-4824-8c1e-5eb8a7ae5f16
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Average Speed' =
+			
+			AVERAGE(fact_taxi_trip[average_speed_mph])
+		lineageTag: c829cdf7-9d22-43e6-b9b5-2039d7bd0613
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column Measure
+		lineageTag: 4c50520d-364c-4482-aa71-c6e791a30565
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Measure]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'All Measures' = calculated
+		mode: import
+		source =
+				DATATABLE(
+				    "Measure", STRING,
+				    {
+				        {"Placeholder"}
+				    }
+				)
+
+	annotation PBI_Id = a591bcfbab9240e7920bd60687a3aca6
+

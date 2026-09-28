@@ -1,0 +1,48 @@
+table dim_pickup_location
+	lineageTag: 870170a6-56ce-4d9e-9390-b8cf42ce01ad
+	sourceLineageTag: [dbo].[dim_pickup_location]
+
+	column pickup_location_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 578acb49-f3b5-490b-bbff-2d1826fb5cd8
+		sourceLineageTag: pickup_location_key
+		summarizeBy: none
+		sourceColumn: pickup_location_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column borough
+		dataType: string
+		lineageTag: 9205118c-630e-4251-aae9-cc81a810cbfb
+		sourceLineageTag: borough
+		summarizeBy: none
+		sourceColumn: borough
+
+		annotation SummarizationSetBy = Automatic
+
+	column zone
+		dataType: string
+		lineageTag: b2046cf1-7d3b-4214-9391-b40e8ef813d3
+		sourceLineageTag: zone
+		summarizeBy: none
+		sourceColumn: zone
+
+		annotation SummarizationSetBy = Automatic
+
+	column service_zone
+		dataType: string
+		lineageTag: e723f20b-7c66-4752-ada7-0e52669befac
+		sourceLineageTag: service_zone
+		summarizeBy: none
+		sourceColumn: service_zone
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_pickup_location = entity
+		mode: directLake
+		source
+			entityName: dim_pickup_location
+			schemaName: dbo
+			expressionSource: 'DirectLake - LH_Gold'
+

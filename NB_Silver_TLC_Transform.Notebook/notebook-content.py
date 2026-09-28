@@ -1721,3 +1721,347 @@ print("fact_taxi_trip:", spark.read.table("fact_taxi_trip").count())
 # META   "language": "python",
 # META   "language_group": "synapse_pyspark"
 # META }
+
+# CELL ********************
+
+bronze_trips = spark.read.table(
+    "LH_Bronze.dbo.bronze_yellow_trips"
+)
+
+bronze_trips.select(
+    "batch_id"
+).groupBy(
+    "batch_id"
+).count().orderBy(
+    "batch_id"
+).show(truncate=False)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+from pyspark.sql import functions as F
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+bronze_trips.select(
+    F.min("ingestion_timestamp").alias("first_ingestion"),
+    F.max("ingestion_timestamp").alias("last_ingestion")
+).show()
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+bronze_trips.select(
+    "source_file",
+    "batch_id",
+    "ingestion_timestamp"
+).groupBy(
+    "source_file",
+    "batch_id"
+).agg(
+    F.count("*").alias("row_count"),
+    F.min("ingestion_timestamp").alias("first_ingestion"),
+    F.max("ingestion_timestamp").alias("last_ingestion")
+).show(truncate=False)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+from pyspark.sql import Row
+from pyspark.sql import functions as F
+
+control_data = [
+    Row(
+        pipeline_name="nyc_taxi_incremental_pipeline",
+        last_successful_batch_id="202601",
+        last_successful_timestamp="2026-08-31 14:07:52.705387",
+        status="SUCCESS",
+        updated_at="2026-08-31 14:07:52.705387"
+    )
+]
+
+control_df = (
+    spark.createDataFrame(control_data)
+    .withColumn(
+        "last_successful_timestamp",
+        F.to_timestamp("last_successful_timestamp")
+    )
+    .withColumn(
+        "updated_at",
+        F.to_timestamp("updated_at")
+    )
+)
+
+# control_df.write \
+#     .format("delta") \
+#     .mode("overwrite") \
+#     .saveAsTable("LH_Gold.dbo.pipeline_control")
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+spark.read.table(
+    "LH_Gold.dbo.pipeline_control"
+).show(truncate=False)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+from pyspark.sql import functions as F
+
+bronze_trips = spark.read.table(
+    "LH_Bronze.dbo.bronze_yellow_trips"
+)
+
+test_batch_202602 = (
+    bronze_trips
+    .limit(10000)
+    .withColumn("batch_id", F.lit("202602"))
+    .withColumn(
+        "ingestion_timestamp",
+        F.current_timestamp()
+    )
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+test_batch_202602.select(
+    "batch_id",
+    "source_file",
+    "ingestion_timestamp"
+).show(5, truncate=False)
+
+print("Test batch rows:", test_batch_202602.count())
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+# test_batch_202602.write \
+#     .format("delta") \
+#     .mode("overwrite") \
+#     .saveAsTable("LH_Bronze.dbo.bronze_incremental_202602")
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+incremental_bronze = spark.read.table(
+    "LH_Bronze.dbo.bronze_incremental_202602"
+)
+
+print("Rows:", incremental_bronze.count())
+
+incremental_bronze.select(
+    "batch_id"
+).distinct().show()
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+control = spark.read.table(
+    "LH_Gold.dbo.pipeline_control"
+)
+
+last_successful_batch = (
+    control
+    .filter(
+        F.col("pipeline_name") == "nyc_taxi_incremental_pipeline"
+    )
+    .select("last_successful_batch_id")
+    .first()[0]
+)
+
+print("Last successful batch:", last_successful_batch)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+incremental_bronze = spark.read.table(
+    "LH_Bronze.dbo.bronze_incremental_202602"
+)
+
+incremental_source = (
+    incremental_bronze
+    .filter(F.col("batch_id") == incoming_batch)
+)
+
+print("Incremental rows to process:", incremental_source.count())
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+from pyspark.sql import functions as F
+
+# Read the incremental Bronze batch
+incremental_bronze = spark.read.table(
+    "LH_Bronze.dbo.bronze_incremental_202602"
+)
+
+# Identify the incoming batch dynamically
+incoming_batch = (
+    incremental_bronze
+    .select("batch_id")
+    .distinct()
+    .orderBy(F.col("batch_id").desc())
+    .first()[0]
+)
+
+print("Incoming batch:", incoming_batch)
+
+# Extract only that batch
+incremental_source = (
+    incremental_bronze
+    .filter(F.col("batch_id") == incoming_batch)
+)
+
+print("Incremental rows to process:", incremental_source.count())
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+incremental_keys = (
+    incremental_source
+    .withColumn(
+        "trip_key",
+        F.sha2(
+            F.concat_ws(
+                "||",
+                F.col("VendorID").cast("string"),
+                F.col("tpep_pickup_datetime").cast("string"),
+                F.col("tpep_dropoff_datetime").cast("string"),
+                F.col("PULocationID").cast("string"),
+                F.col("DOLocationID").cast("string"),
+                F.col("payment_type").cast("string"),
+                F.col("trip_distance").cast("string"),
+                F.col("total_amount").cast("string")
+            ),
+            256
+        )
+    )
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+gold_fact = spark.read.table(
+    "LH_Gold.dbo.fact_taxi_trip"
+)
+
+existing_keys = (
+    gold_fact
+    .select("trip_key")
+    .distinct()
+)
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }
+
+# CELL ********************
+
+duplicate_check = (
+    incremental_keys
+    .join(
+        existing_keys,
+        on="trip_key",
+        how="inner"
+    )
+)
+
+print("Incoming rows:", incremental_keys.count())
+print("Already existing in Gold:", duplicate_check.count())
+
+# METADATA ********************
+
+# META {
+# META   "language": "python",
+# META   "language_group": "synapse_pyspark"
+# META }

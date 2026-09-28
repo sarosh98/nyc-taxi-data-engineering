@@ -1,0 +1,20 @@
+relationship a3582584-6cd2-a5e6-5962-0d0745e4512f
+	fromColumn: fact_taxi_trip.date_key
+	toColumn: dim_date.date_key
+
+relationship 1faea4a9-800f-907f-c22d-894c5496dfea
+	fromColumn: fact_taxi_trip.dropoff_location_key
+	toColumn: dim_dropoff_location.dropoff_location_key
+
+relationship 0330eb87-6168-e6bd-e368-20455c156501
+	fromColumn: fact_taxi_trip.payment_type_key
+	toColumn: dim_payment_type.payment_type_key
+
+relationship e97e3a4d-89da-dca3-c7ad-815ad75ac6d7
+	fromColumn: fact_taxi_trip.pickup_location_key
+	toColumn: dim_pickup_location.pickup_location_key
+
+relationship 8a6f5cd4-74cd-7b66-9cb9-ed18f2c9c71c
+	fromColumn: fact_taxi_trip.vendor_key
+	toColumn: dim_vendor.vendor_key
+

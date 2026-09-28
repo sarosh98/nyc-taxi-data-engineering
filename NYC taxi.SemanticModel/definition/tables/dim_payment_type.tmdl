@@ -1,0 +1,30 @@
+table dim_payment_type
+	lineageTag: 5ba33d8c-2449-4c81-a47d-c70988141d05
+	sourceLineageTag: [dbo].[dim_payment_type]
+
+	column payment_type_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 3555e540-622c-4881-a6f4-d251e32f38fa
+		sourceLineageTag: payment_type_key
+		summarizeBy: none
+		sourceColumn: payment_type_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column payment_type_name
+		dataType: string
+		lineageTag: 3ae2157e-f621-434e-a379-f150249ec0ec
+		sourceLineageTag: payment_type_name
+		summarizeBy: none
+		sourceColumn: payment_type_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_payment_type = entity
+		mode: directLake
+		source
+			entityName: dim_payment_type
+			schemaName: dbo
+			expressionSource: 'DirectLake - LH_Gold'
+

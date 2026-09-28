@@ -1,0 +1,30 @@
+table dim_vendor
+	lineageTag: 82125d54-a3bc-41ef-aaa8-6ffe4036d06e
+	sourceLineageTag: [dbo].[dim_vendor]
+
+	column vendor_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 87fa1d33-80e0-4635-ae0f-efe3b9f2676f
+		sourceLineageTag: vendor_key
+		summarizeBy: none
+		sourceColumn: vendor_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column vendor_name
+		dataType: string
+		lineageTag: b89120f0-d3d0-471e-b13d-b8fd87ffe4e1
+		sourceLineageTag: vendor_name
+		summarizeBy: none
+		sourceColumn: vendor_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_vendor = entity
+		mode: directLake
+		source
+			entityName: dim_vendor
+			schemaName: dbo
+			expressionSource: 'DirectLake - LH_Gold'
+

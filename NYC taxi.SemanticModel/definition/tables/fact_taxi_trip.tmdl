@@ -1,0 +1,243 @@
+table fact_taxi_trip
+	lineageTag: 365f5450-09fe-4439-a5fa-455b55949e62
+	sourceLineageTag: [dbo].[fact_taxi_trip]
+
+	column trip_key
+		dataType: string
+		lineageTag: dd88201b-ed29-45e2-9d96-e827e91dc668
+		sourceLineageTag: trip_key
+		summarizeBy: none
+		sourceColumn: trip_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		formatString: 0
+		lineageTag: fe2824a2-1151-4280-bc73-d1115d67d878
+		sourceLineageTag: date_key
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column pickup_location_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 96bf6981-a639-484a-a74d-b1195a53ca4f
+		sourceLineageTag: pickup_location_key
+		summarizeBy: none
+		sourceColumn: pickup_location_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column dropoff_location_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 87e6d08d-013a-4775-8d21-601a2628ef8a
+		sourceLineageTag: dropoff_location_key
+		summarizeBy: none
+		sourceColumn: dropoff_location_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column payment_type_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 15b9615e-3854-4a9e-89be-adb451d76bfb
+		sourceLineageTag: payment_type_key
+		summarizeBy: none
+		sourceColumn: payment_type_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column vendor_key
+		dataType: int64
+		formatString: 0
+		lineageTag: 4b0640e6-7239-484b-b7c3-87cfdab3fbab
+		sourceLineageTag: vendor_key
+		summarizeBy: none
+		sourceColumn: vendor_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column pickup_datetime
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 77ed0724-a38a-4291-86e6-125703a33431
+		sourceLineageTag: pickup_datetime
+		summarizeBy: none
+		sourceColumn: pickup_datetime
+
+		annotation SummarizationSetBy = Automatic
+
+	column dropoff_datetime
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: a96ff08c-c4d4-4a82-95e9-2d2aaacd2f1c
+		sourceLineageTag: dropoff_datetime
+		summarizeBy: none
+		sourceColumn: dropoff_datetime
+
+		annotation SummarizationSetBy = Automatic
+
+	column passenger_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 0e041560-3f52-4454-b3b5-8c7d8be999e4
+		sourceLineageTag: passenger_count
+		summarizeBy: sum
+		sourceColumn: passenger_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column trip_distance
+		dataType: double
+		lineageTag: 7eb8e51b-fe33-4b7e-b5e0-dab740300938
+		sourceLineageTag: trip_distance
+		summarizeBy: sum
+		sourceColumn: trip_distance
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column trip_duration_minutes
+		dataType: double
+		lineageTag: 2c772ef2-6f93-40fe-b6c3-6400f46e924f
+		sourceLineageTag: trip_duration_minutes
+		summarizeBy: sum
+		sourceColumn: trip_duration_minutes
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column average_speed_mph
+		dataType: double
+		lineageTag: d1911257-696b-41f2-a3c8-633b69937ec0
+		sourceLineageTag: average_speed_mph
+		summarizeBy: sum
+		sourceColumn: average_speed_mph
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column fare_amount
+		dataType: double
+		lineageTag: 6ab7c18e-ee43-432c-9333-84d10d67f276
+		sourceLineageTag: fare_amount
+		summarizeBy: sum
+		sourceColumn: fare_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column extra
+		dataType: double
+		lineageTag: d9be2453-ce8b-4959-b6eb-2f0c1a211cad
+		sourceLineageTag: extra
+		summarizeBy: sum
+		sourceColumn: extra
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column mta_tax
+		dataType: double
+		lineageTag: 245087f2-4375-4d04-ab92-707b9d62dad3
+		sourceLineageTag: mta_tax
+		summarizeBy: sum
+		sourceColumn: mta_tax
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tip_amount
+		dataType: double
+		lineageTag: a9f04adc-9118-4e87-b3b9-f068966dc135
+		sourceLineageTag: tip_amount
+		summarizeBy: sum
+		sourceColumn: tip_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tolls_amount
+		dataType: double
+		lineageTag: 3b420152-a9bf-4b89-8dae-9228d2774538
+		sourceLineageTag: tolls_amount
+		summarizeBy: sum
+		sourceColumn: tolls_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column improvement_surcharge
+		dataType: double
+		lineageTag: 946e9c57-6ec5-41a9-ad20-06f475635858
+		sourceLineageTag: improvement_surcharge
+		summarizeBy: sum
+		sourceColumn: improvement_surcharge
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column total_amount
+		dataType: double
+		lineageTag: a876345d-9c43-447d-b34a-93ad325b8127
+		sourceLineageTag: total_amount
+		summarizeBy: sum
+		sourceColumn: total_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column congestion_surcharge
+		dataType: double
+		lineageTag: 65cd9f35-6a78-47d5-87ee-9f02ad53242b
+		sourceLineageTag: congestion_surcharge
+		summarizeBy: sum
+		sourceColumn: congestion_surcharge
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column airport_fee
+		dataType: double
+		lineageTag: 353b10ab-c03c-4be6-b5f2-41dd3b074e64
+		sourceLineageTag: airport_fee
+		summarizeBy: sum
+		sourceColumn: airport_fee
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column cbd_congestion_fee
+		dataType: double
+		lineageTag: f0b2d2a1-fedf-48f4-9bcb-b3a280152ee4
+		sourceLineageTag: cbd_congestion_fee
+		summarizeBy: sum
+		sourceColumn: cbd_congestion_fee
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition fact_taxi_trip = entity
+		mode: directLake
+		source
+			entityName: fact_taxi_trip
+			schemaName: dbo
+			expressionSource: 'DirectLake - LH_Gold'
+
